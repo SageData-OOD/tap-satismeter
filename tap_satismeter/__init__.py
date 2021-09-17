@@ -67,7 +67,7 @@ def load_schemas():
 def get_key_properties(schema_name: str) -> List[str]:
     """ return for each schema which fields are mandatory included. """
     if schema_name == 'responses':
-        return ['id', 'created', 'rating', 'category', 'score', 'feedback']
+        return ['id']
     elif schema_name == 'response_statistics':
         return ['id', 'date']
     return []
