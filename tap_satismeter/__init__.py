@@ -69,17 +69,36 @@ def get_key_properties(schema_name: str) -> List[str]:
     if schema_name == 'responses':
         return ['id', 'created', 'rating', 'category', 'score', 'feedback']
     elif schema_name == 'response_statistics':
-        return ['id']
+        return ['id', 'date']
     return []
+
+
+def create_metadata_for_report(schema, key_properties):
+    if key_properties is not None:
+        mdata = [{"breadcrumb": [], "metadata": {"table-key-properties": key_properties, "inclusion": "available"}}]
+    else:
+        mdata = [{"breadcrumb": [], "metadata": {"inclusion": "available"}}]
+
+    for key in schema.get("properties"):
+        # hence when property is object, we will only consider properties of that object without taking object itself.
+        if "object" in schema.get("properties", {}).get(key, {}).get("type"):
+            inclusion = "available"
+            mdata.extend(
+                [{"breadcrumb": ["properties", key, "properties", prop], "metadata": {"inclusion": inclusion}} for prop
+                 in schema.get("properties", {}).get(key).get("properties")])
+        else:
+            inclusion = "automatic" if key in key_properties else "available"
+            mdata.append({"breadcrumb": ["properties", key], "metadata": {"inclusion": inclusion}})
+
+    return mdata
 
 
 def discover():
     streams = []
 
     for schema_name, schema in load_schemas():
-
-        meta_data = metadata.get_standard_metadata(schema=schema,
-                                                   key_properties=get_key_properties(schema_name))
+        meta_data = create_metadata_for_report(schema=schema,
+                                               key_properties=get_key_properties(schema_name))
 
         # create and add catalog entry
         catalog_entry = {
@@ -183,9 +202,7 @@ def output_responses_statistics(stream, config: dict, state: dict) -> dict:
         bookmark = start_datetime
         with record_counter(endpoint=stream_id) as counter:
             for record in res_json['data']:
-                record["start_date"] = str(start_datetime.date())
-                record["end_date"] = str(end_datetime.date())
-
+                record["date"] = str(start_datetime.date())
                 # Type Conversation and Transformation
                 transformed_record = transform(record, schema, metadata=mdata)
                 write_record(stream_id, transformed_record)

@@ -7,11 +7,7 @@
     "type": {
       "type": ["null", "string"]
     },
-    "start_date": {
-      "type": ["null", "string"],
-      "format": "date-time"
-    },
-    "end_date": {
+    "date": {
       "type": ["null", "string"],
       "format": "date-time"
     },
