@@ -73,11 +73,23 @@ def get_key_properties(schema_name: str) -> List[str]:
     return []
 
 
-def create_metadata_for_report(schema, key_properties):
+def get_valid_replication_keys(schema_name):
+    keys = {
+        "responses": ["created"],
+        "response_statistics": ["date"]
+    }
+
+    return keys.get(schema_name, [])
+
+
+def create_metadata_for_report(schema, schema_name, key_properties):
     if key_properties is not None:
-        mdata = [{"breadcrumb": [], "metadata": {"table-key-properties": key_properties, "inclusion": "available"}}]
+        mdata = [{"breadcrumb": [], "metadata": {"table-key-properties": key_properties, "inclusion": "available",
+                                                 "forced-replication-method": "INCREMENTAL",
+                                                 "valid-replication-keys": get_valid_replication_keys(schema_name)}}]
     else:
-        mdata = [{"breadcrumb": [], "metadata": {"inclusion": "available"}}]
+        mdata = [{"breadcrumb": [], "metadata": {"inclusion": "available", "forced-replication-method": "INCREMENTAL",
+                                                 "valid-replication-keys": get_valid_replication_keys(schema_name)}}]
 
     for key in schema.get("properties"):
         # hence when property is object, we will only consider properties of that object without taking object itself.
@@ -98,6 +110,7 @@ def discover():
 
     for schema_name, schema in load_schemas():
         meta_data = create_metadata_for_report(schema=schema,
+                                               schema_name=schema_name,
                                                key_properties=get_key_properties(schema_name))
 
         # create and add catalog entry
