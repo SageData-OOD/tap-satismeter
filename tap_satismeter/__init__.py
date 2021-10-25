@@ -126,12 +126,17 @@ def discover():
     return {'streams': streams}
 
 
-def update_and_export_state(stream_id, state, bookmark):
+def update_and_export_state(stream_id, state, start_datetime, bookmark, data_count):
+    # if run for the first time and state not given then it start date will be the bookmark
     if 'bookmarks' not in state:
         state['bookmarks'] = {}
-    state['bookmarks'][stream_id] = {'last_record': bookmark.isoformat()}
+        state['bookmarks'][stream_id] = {'last_record': start_datetime.isoformat()}
 
-    write_state(state)
+    # if we haven't received any records, it will skip the write state
+    if data_count > 0:
+        write_state(state)
+
+    state['bookmarks'][stream_id] = {'last_record': bookmark.isoformat()}
 
 
 def generate_params(stream_id, config, state):
@@ -177,16 +182,17 @@ def output_responses(stream, config: dict, state: dict) -> dict:
                 transformed_record = transform(record, schema, metadata=mdata)
                 write_record(stream_id, transformed_record)
                 counter.increment()
-                bookmark = max([arrow.get(record['created']), bookmark])
 
         # If we're not past the current timestamp, set the bookmark
         # to the end_datetime requested as there won't be any new ones
         # coming in for past times.
-        if end_datetime < arrow.utcnow():
+        if end_datetime <= arrow.utcnow():
             bookmark = end_datetime
 
+        data_count = len(res_json['responses'])
+
         # Update and export state
-        update_and_export_state(stream_id, state, bookmark)
+        update_and_export_state(stream_id, state, start_datetime, bookmark, data_count)
 
         # Stop when we had requested past the current timestamp,
         # there won't be anything more.
@@ -221,11 +227,12 @@ def output_responses_statistics(stream, config: dict, state: dict) -> dict:
                 write_record(stream_id, transformed_record)
                 counter.increment()
 
-        if end_datetime < arrow.utcnow():
+        data_count = len(res_json['data'])
+        if end_datetime <= arrow.utcnow():
             bookmark = end_datetime
 
         # Update and export state
-        update_and_export_state(stream_id, state, bookmark)
+        update_and_export_state(stream_id, state, bookmark, data_count)
 
         # Stop when we had requested past the current timestamp,
         # there won't be anything more.
