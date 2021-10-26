@@ -232,7 +232,7 @@ def output_responses_statistics(stream, config: dict, state: dict) -> dict:
             bookmark = end_datetime
 
         # Update and export state
-        update_and_export_state(stream_id, state, bookmark, data_count)
+        update_and_export_state(stream_id, state, start_datetime, bookmark, data_count)
 
         # Stop when we had requested past the current timestamp,
         # there won't be anything more.
